@@ -3,8 +3,8 @@ package com.hps.integrator.terminals.pax.interfaces;
 import com.hps.integrator.abstractions.*;
 import com.hps.integrator.infrastructure.HpsException;
 import com.hps.integrator.infrastructure.HpsMessageException;
-import sun.misc.IOUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -52,7 +52,25 @@ public class PaxHttpInterface implements IDeviceCommInterface {
                 onMessageSent.messageSent(message.toString());
 
             InputStream responseStream = _client.getInputStream();
-            return IOUtils.readFully(responseStream, _client.getContentLength(), true);
+            int contentLength = _client.getContentLength();
+            if (contentLength > 0) {
+                byte[] buffer = new byte[contentLength];
+                int bytesRead = 0;
+                while (bytesRead < contentLength) {
+                    int read = responseStream.read(buffer, bytesRead, contentLength - bytesRead);
+                    if (read == -1) break;
+                    bytesRead += read;
+                }
+                return buffer;
+            } else {
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                byte[] data = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = responseStream.read(data, 0, data.length)) != -1) {
+                    buffer.write(data, 0, bytesRead);
+                }
+                return buffer.toByteArray();
+            }
         } catch(IOException e){
             throw new HpsMessageException("Failed to send message. Check inner exception for more details.", e);
         }

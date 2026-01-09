@@ -11,6 +11,8 @@ import com.hps.integrator.entities.credit.*;
 import com.hps.integrator.infrastructure.Element;
 import com.hps.integrator.infrastructure.ElementTree;
 import com.hps.integrator.infrastructure.HpsException;
+import com.hps.integrator.infrastructure.emums.MasterCardCITMITIndicator;
+import com.hps.integrator.infrastructure.emums.StoredCredentialInitiator;
 import com.hps.integrator.infrastructure.validation.HpsInputValidation;
 import com.hps.integrator.services.fluent.HpsFluentCreditService;
 
@@ -40,6 +42,9 @@ public class CreditChargeBuilder extends HpsBuilderAbstract<HpsFluentCreditServi
     private BigDecimal shippingAmount;
     private HpsTagDataType tagData;
     private HpsEMVDataType emvData;
+    private StoredCredentialInitiator cardBrandStorage;
+    private String cardBrandTransactionId;
+    private MasterCardCITMITIndicator masterCardIndicator;
     
     public CreditChargeBuilder withEMVData(HpsEMVDataType emvData){
         this.emvData = emvData;
@@ -140,6 +145,19 @@ public class CreditChargeBuilder extends HpsBuilderAbstract<HpsFluentCreditServi
         this.autoSubstantiation = autoSubstantiation;
         return this;
     }
+    public CreditChargeBuilder withCardBrandStorage(StoredCredentialInitiator initiator) {
+        this.cardBrandStorage = initiator;
+        return this;
+    }
+    public CreditChargeBuilder withCardBrandStorage(StoredCredentialInitiator initiator, String cardBrandTransactionId) {
+        this.cardBrandStorage = initiator;
+        this.cardBrandTransactionId = cardBrandTransactionId;
+        return this;
+    }
+    public CreditChargeBuilder withMasterCardIndicator(MasterCardCITMITIndicator indicator) {
+        this.masterCardIndicator = indicator;
+        return this;
+    }
 
     public CreditChargeBuilder(HpsFluentCreditService service) {
         super(service);
@@ -217,6 +235,16 @@ public class CreditChargeBuilder extends HpsBuilderAbstract<HpsFluentCreditServi
         }
         if(emvData != null) {
             block1.append(service.hydrateEMVData(emvData));
+        }
+        if(cardBrandStorage != null) {
+            Element cardBrandStorageElement = Et.subElement(block1, "CardBrandStorage");
+            Et.subElement(cardBrandStorageElement, "Initiator").text(cardBrandStorage.name());
+            if(cardBrandTransactionId != null) {
+                Et.subElement(cardBrandStorageElement, "CardBrandTxnId").text(cardBrandTransactionId);
+            }
+        }
+        if(masterCardIndicator != null) {
+            Et.subElement(block1, "MasterCardIndicator").text(masterCardIndicator.name());
         }
         String clientTransactionId = service.getClientTxnId(details);
         ElementTree response = service.submitTransaction(transaction, clientTransactionId);
